@@ -3,7 +3,7 @@ import datetime
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import Event, Participant, Feedback
+from database.models import Event, Participant, Feedback, Admin
 
 
 # Добавление нового собыдия в БД через админку.
@@ -34,6 +34,19 @@ async def orm_add_participant(session: AsyncSession, data: dict):
     await session.commit()
 
 
+async def orm_add_admin(session: AsyncSession, data: dict):
+    obj = Admin(
+        tg_user_id=data["tg_id"],
+        surname=data["surname"],
+        name=data["name"],
+        phone_number=data["phone_number"],
+        admin_access=data["admin_access"],
+        main_admin=data["main_admin"],
+    )
+    session.add(obj)
+    await session.commit()
+
+
 async def orm_add_feedback(session: AsyncSession, data: dict):
     obj = Feedback(
         participant_id=int(data["participant_id"]),
@@ -52,9 +65,23 @@ async def orm_get_all_events(session: AsyncSession):
 
 
 async def orm_get_upcoming_events(session: AsyncSession):
-    query = select(Event).where(Event.beginning_event >= datetime.date.today())
+    query = (select(Event).where(Event.beginning_event >= datetime.date.today()))
     result = await session.execute(query)
     return result.scalars().all()
+
+
+async def orm_get_upcoming_events_mailing(session: AsyncSession):
+    query = (select(Event.id, Event.name_event, Event.location_event)
+             .where(Event.beginning_event - datetime.date.today() == 1))
+    result = await session.execute(query)
+    return result.all()
+
+
+async def orm_mailing_after_the_event(session: AsyncSession):
+    print("Сработала фунция orm_mailing_after_the_event!")
+    query = select(Event).where(Event.the_end_event == datetime.date.today())
+    result = await session.execute(query)
+    return result.all()
 
 
 async def orm_get_past_events(session: AsyncSession):
@@ -68,6 +95,19 @@ async def orm_get_event(session: AsyncSession, event_id: int):
     query = select(Event).where(Event.id == event_id)
     result = await session.execute(query)
     return result.scalar()
+
+
+# Находит Админа по id
+async def orm_get_admin(session: AsyncSession, tg_user_id: str):
+    query = select(Admin).where(Admin.tg_user_id == tg_user_id)
+    result = await session.execute(query)
+    return result.scalar()
+
+
+async def orm_get_all_admin(session: AsyncSession):
+    query = select(Admin).where(Admin.main_admin != True)
+    result = await session.execute(query)
+    return result.scalars().all()
 
 
 async def orm_get_events_with_user(session: AsyncSession, tg_user_id: str):
@@ -102,14 +142,13 @@ async def orm_delete_event(session: AsyncSession, event_id: int):
 async def orm_get_participants(session: AsyncSession, event_id: int):
     query = select(Participant).where(Participant.event_id == event_id)
     result = await session.execute(query)
-    generated_text = []
-    counter = 0
-    for participant in result.scalars().all():
-        counter += 1
-        text = f"{counter}.{participant.surname} {participant.name}\n   Номер тел-а: {participant.phone_number}.\n\n"
-        generated_text.append(text)
-    print(generated_text)
-    return generated_text
+    return result.scalars().all()
+
+
+async def orm_get_participants_mailing(session: AsyncSession, event_id: int):
+    query = select(Participant.tg_user_id, Participant.name).where(Participant.event_id == event_id)
+    result = await session.execute(query)
+    return result.all()
 
 
 async def orm_get_participants_tg_user_id(session: AsyncSession, event_id: int):

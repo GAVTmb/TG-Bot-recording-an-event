@@ -13,17 +13,27 @@ start_kb_admin.add(
 start_kb_admin.adjust(2, 1)
 
 
+start_kb_main_admin = ReplyKeyboardBuilder()
+start_kb_main_admin.attach(start_kb_admin)
+start_kb_main_admin.row(KeyboardButton(text="Посмотреть адин-в"),
+                        KeyboardButton(text="Изменить пароль"),)
+
+
 kb_cancel_admin = ReplyKeyboardBuilder()
 kb_cancel_admin.add(
     KeyboardButton(text="Отменить"),
-    KeyboardButton(text="Назад_"),
 )
-kb_cancel_admin.adjust(2,)
+kb_cancel_admin.adjust(1,)
 
 
-kb_skip_admin = ReplyKeyboardBuilder()
-kb_skip_admin.attach(kb_cancel_admin)
-kb_skip_admin.row(KeyboardButton(text="Пропустить"),)
+kb_cancel_back_admin = ReplyKeyboardBuilder()
+kb_cancel_back_admin.attach(kb_cancel_admin)
+kb_cancel_back_admin.row(KeyboardButton(text="Назад_"),)
+
+
+kb_cancel_back_skip_admin = ReplyKeyboardBuilder()
+kb_cancel_back_skip_admin.attach(kb_cancel_back_admin)
+kb_cancel_back_skip_admin.row(KeyboardButton(text="Пропустить"),)
 
 
 start_kb_user = ReplyKeyboardBuilder()

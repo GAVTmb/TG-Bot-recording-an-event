@@ -14,7 +14,7 @@ from test import uploading_db
 from database.orm_query import (orm_get_all_events, orm_get_upcoming_events, orm_get_event,
                                 orm_get_participants_tg_user_id,
                                 orm_get_feedbacks_user, orm_add_participant, orm_get_events_with_user,
-                                orm_get_participant_tg_user_id_event_id, orm_get_past_events, orm_add_feedback)
+                                orm_get_participant_tg_user_id_event_id, orm_add_feedback)
 
 
 user_router = Router()
@@ -44,7 +44,7 @@ class AddFeedbackUser(StatesGroup):
     text_feedback = None
 
 
-@user_router.message(F.text == "Привет")
+@user_router.message(F.text == "Старт")
 async def start_user(message: types.Message, session: AsyncSession):
     # await uploading_db(session)
     await message.answer("Здравствуйте, чем вам помочь?",
@@ -56,7 +56,7 @@ async def show_all_events(message: types.Message, session: AsyncSession):
     for event in await orm_get_all_events(session):
         beg_event = event.beginning_event
         end_event = event.the_end_event
-        if end_event >= datetime.date.today():
+        if beg_event >= datetime.date.today():
             await message.answer_photo(
                 event.image,
                 caption=f"{event.name_event}\n\n{event.description_event}\n\nСтоимость участия - {event.price}руб.\n"
@@ -102,7 +102,7 @@ async def leave_feedback_event_user_mes(message: types.Message, session: AsyncSe
     event_list = await orm_get_events_with_user(session, str(tg_user_id))
     if len(event_list) > 0:
         for event in event_list:
-            if event.the_end_event < datetime.date.today():
+            if event.the_end_event <= datetime.date.today():
                 await message.answer_photo(
                     event.image,
                     caption=f"{event.name_event}\n\n{event.description_event}\n"
@@ -208,7 +208,7 @@ async def register_event(callback: types.CallbackQuery, state: FSMContext, sessi
 
 @user_router.message(StateFilter("*"), Command("Отмена"))
 @user_router.message(StateFilter("*"), F.text == "Отмена")
-async def cancel_handler_admin(message: types.Message, state: FSMContext):
+async def cancel_handler_user(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
         return
@@ -221,7 +221,7 @@ async def cancel_handler_admin(message: types.Message, state: FSMContext):
 # Возвращает на шаг незад
 @user_router.message(StateFilter("*"), Command("Назад"))
 @user_router.message(StateFilter("*"), F.text == "Назад")
-async def return_handler_admin(message: types.Message, state: FSMContext):
+async def return_handler_user(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state == AddUser.surname:
         await message.answer("Напишите вашу фамилию или жми отмена")
