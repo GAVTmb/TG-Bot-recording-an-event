@@ -12,7 +12,7 @@ class Admin(Base):
     __tablename__ = "admin"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    tg_user_id: Mapped[str] = mapped_column(String(30), unique= False, nullable=False)
+    tg_id_admin: Mapped[str] = mapped_column(String(30), unique= False, nullable=False)
     surname: Mapped[str] = mapped_column(String(30), nullable=False)
     name: Mapped[str] = mapped_column(String(30), nullable=False)
     phone_number: Mapped[str] = mapped_column(String(20), nullable=False)

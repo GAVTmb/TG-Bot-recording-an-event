@@ -12,7 +12,7 @@ import datetime
 
 from database.orm_query import (orm_add_event, orm_get_all_events, orm_delete_event,
                                 orm_update_event, orm_get_event, orm_get_participants, orm_get_feedbacks_admin,
-                                orm_get_admin, orm_add_admin, orm_get_all_admin)
+                                orm_get_admin, orm_add_admin, orm_get_all_admin, orm_update_admin_access)
 from keyboards import kb
 from keyboards.inline import get_callback_buts
 
@@ -22,7 +22,7 @@ admin_router = Router()
 
 
 class RegistrationAdmin(StatesGroup):
-    tg_id = State()
+    tg_id_admin = State()
     surname = State()
     name = State()
     phone_number = State()
@@ -69,7 +69,7 @@ async def admin_login(message: types.Message, state: FSMContext, session: AsyncS
     if admin is None:
         await message.answer("Введите пароль!",
                              reply_markup=kb.kb_cancel_admin.as_markup(resize_keyboard=True))
-        await state.set_state(RegistrationAdmin.tg_id)
+        await state.set_state(RegistrationAdmin.tg_id_admin)
     elif admin.admin_access:
         await message.answer("Вы вошли в режим администратора!",
                              reply_markup=kb.start_kb_admin.as_markup(resize_keyboard=True))
@@ -134,18 +134,18 @@ async def return_handler_admin(message: types.Message, state: FSMContext):
         previous = step
 
 
-@admin_router.message(StateFilter(RegistrationAdmin.tg_id))
+@admin_router.message(StateFilter(RegistrationAdmin.tg_id_admin))
 async def admin_registration_tg_id(message: types.Message, state: FSMContext):
-    tg_id = message.from_user.id
+    tg_id_admin = message.from_user.id
     if os.getenv('MASTER_PASSWORD') == message.text:
-        await state.update_data(tg_id=str(tg_id))
+        await state.update_data(tg_id_admin=str(tg_id_admin))
         await state.update_data(admin_access=False)
         await state.update_data(main_admin=True)
         await state.set_state(RegistrationAdmin.surname)
         await message.answer("Приветствую хозяин! Пройдите регистрацию, напишите вашу Фамилию.",
                              reply_markup=kb.kb_cancel_admin.as_markup(resize_keyboard=True))
     elif message.text in ADMIN_PASSWORD:
-        await state.update_data(tg_id=str(tg_id))
+        await state.update_data(tg_id_admin=str(tg_id_admin))
         await state.update_data(admin_access=True)
         await state.update_data(main_admin=False)
         await state.set_state(RegistrationAdmin.surname)
@@ -207,6 +207,7 @@ async def show_all_events_admin(message: types.Message, session: AsyncSession):
         )
 
 
+# Удаление определенного события.
 @admin_router.callback_query(F.data.startswith("delete_"))
 async def delete_event_admin(callback: types.CallbackQuery, session: AsyncSession):
     event_id = callback.data.split("_")[-1]
@@ -230,7 +231,7 @@ async def change_event_admin(callback: types.CallbackQuery, state: FSMContext, s
     await state.set_state(AddEvent.name_event)
 
 
-# Выдает отзывы определенного события. Нужно добавить проверку для вывода кнопок.
+# Выдает отзывы определенного события.
 @admin_router.callback_query(F.data.startswith("feedbacks_"))
 async def feedback_event_admin(callback: types.CallbackQuery, session: AsyncSession):
     event_id = callback.data.split("_")[-1]
@@ -238,13 +239,12 @@ async def feedback_event_admin(callback: types.CallbackQuery, session: AsyncSess
     feedback_list = await orm_get_feedbacks_admin(session, int(event_id))
     if feedback_list:
         await callback.answer()
-        await callback.message.answer_photo(event.image, caption=f"{event.name_event}\n\n{"".join(feedback_list)}",
-                                            reply_markup=kb.start_kb_admin.as_markup(resize_keyboard=True))
+        await callback.message.answer_photo(event.image, caption=f"{event.name_event}\n\n{"".join(feedback_list)}",)
+
     else:
         await callback.answer()
         await callback.message.answer_photo(event.image, caption=f"{event.name_event}"
-                                                                 f"\n\nУ этого события еще нет отзывов.",
-                                            reply_markup=kb.start_kb_admin.as_markup(resize_keyboard=True))
+                                                                 f"\n\nУ этого события еще нет отзывов.",)
 
 
 @admin_router.callback_query(F.data.startswith("participants_"))
@@ -259,13 +259,12 @@ async def participants_event_admin(callback: types.CallbackQuery, session: Async
         participants_list.append(text)
     if participants_list:
         await callback.answer()
-        await callback.message.answer_photo(event.image, caption=f"{event.name_event}\n\n{"".join(participants_list)}",
-                                            reply_markup=kb.start_kb_admin.as_markup(resize_keyboard=True))
+        await callback.message.answer_photo(event.image, caption=f"{event.name_event}\n\n{"".join(participants_list)}",)
+
     else:
         await callback.answer()
         await callback.message.answer_photo(event.image, caption=f"{event.name_event}"
-                                                                 f"\n\nВ этом событии еще нет участников.",
-                                            reply_markup=kb.start_kb_admin.as_markup(resize_keyboard=True))
+                                                                 f"\n\nВ этом событии еще нет участников.",)
 
 
 # Отлавливает нажатие кнопки "Посмотреть адинистраторов".
@@ -274,17 +273,39 @@ async def view_admins(message: types.Message, session: AsyncSession):
     for admin in await orm_get_all_admin(session):
         print(f"{admin.surname} {admin.name}\n т.{admin.phone_number}")
         if admin.admin_access:
-            await message.answer(f"{admin.surname} {admin.name}\nт.{admin.phone_number}\nДоступ разрешен!",
+            await message.answer(f"{admin.surname} {admin.name}\nтел: {admin.phone_number}\nДоступ разрешен!",
                                  reply_markup=get_callback_buts(buts={
-                                     "Запретить доступ": f"block_{admin.id}",
+                                     "Запретить доступ": f"block_{admin.tg_id_admin}",
                                  }, sizes=(1,))
                                  )
         elif not admin.admin_access:
-            await message.answer(f"{admin.surname} {admin.name}\nт.{admin.phone_number}\nДоступ запрещен!",
+            await message.answer(f"{admin.surname} {admin.name}\nтел: {admin.phone_number}\nДоступ запрещен!",
                                  reply_markup=get_callback_buts(buts={
-                                     "Разрешить доступ": f"unblock_{admin.id}",
+                                     "Разрешить доступ": f"unblock_{admin.tg_id_admin}",
                                  }, sizes=(1,))
                                  )
+
+
+@admin_router.callback_query(F.data.startswith("block_"))
+async def block_admin (callback: types.CallbackQuery, session: AsyncSession):
+    tg_id_admin = callback.data.split("_")[-1]
+    admin_data = await orm_get_admin(session, str(tg_id_admin))
+    data = False
+    await orm_update_admin_access(session, str(tg_id_admin), data)
+    await callback.answer()
+    await callback.message.answer(f"Доступ {admin_data.surname} {admin_data.name} запрещен!",
+                                  reply_markup=kb.start_kb_main_admin.as_markup(resize_keyboard=True))
+
+
+@admin_router.callback_query(F.data.startswith("unblock_"))
+async def unblock_admin (callback: types.CallbackQuery, session: AsyncSession):
+    tg_id_admin = callback.data.split("_")[-1]
+    admin_data = await orm_get_admin(session, str(tg_id_admin))
+    data = True
+    await orm_update_admin_access(session, str(tg_id_admin), data)
+    await callback.answer()
+    await callback.message.answer(f"Доступ {admin_data.surname} {admin_data.name} разрешен!",
+                                  reply_markup=kb.start_kb_main_admin.as_markup(resize_keyboard=True))
 
 
 # Отлавливает нажатие кнопки "Изменить пароль". Входит в режим FSM, отправляет сообщение пользователю

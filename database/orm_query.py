@@ -98,8 +98,8 @@ async def orm_get_event(session: AsyncSession, event_id: int):
 
 
 # Находит Админа по id
-async def orm_get_admin(session: AsyncSession, tg_user_id: str):
-    query = select(Admin).where(Admin.tg_user_id == tg_user_id)
+async def orm_get_admin(session: AsyncSession, tg_id_admin: str):
+    query = select(Admin).where(Admin.tg_id_admin == tg_id_admin)
     result = await session.execute(query)
     return result.scalar()
 
@@ -108,6 +108,13 @@ async def orm_get_all_admin(session: AsyncSession):
     query = select(Admin).where(Admin.main_admin != True)
     result = await session.execute(query)
     return result.scalars().all()
+
+
+async def orm_update_admin_access(session: AsyncSession, tg_id_admin: str, data: bool):
+    query = update(Admin).where(Admin.tg_id_admin == tg_id_admin).values(
+        admin_access=data,)
+    await session.execute(query)
+    await session.commit()
 
 
 async def orm_get_events_with_user(session: AsyncSession, tg_user_id: str):
