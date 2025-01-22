@@ -10,9 +10,12 @@ from aiogram.fsm.state import StatesGroup, State
 from sqlalchemy.ext.asyncio import AsyncSession
 import datetime
 
-from database.orm_query import (orm_add_event, orm_get_all_events, orm_delete_event,
-                                orm_update_event, orm_get_event, orm_get_participants, orm_get_feedbacks_admin,
-                                orm_get_admin, orm_add_admin, orm_get_all_admin, orm_update_admin_access)
+from database.orm_query_feedback import orm_get_feedbacks_admin
+from database.orm_query_admin import orm_get_admin, orm_add_admin, orm_get_all_admin, orm_update_admin_access
+from database.orm_query_event import (orm_add_event, orm_get_all_events, orm_delete_event, orm_update_event,
+                                      orm_get_event)
+from database.orm_query_participant import orm_get_participants
+
 from keyboards import kb
 from keyboards.inline import get_callback_buts
 

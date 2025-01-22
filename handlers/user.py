@@ -1,6 +1,6 @@
 import os
 from aiogram import F, types, Router, Bot
-from aiogram.filters import Command, StateFilter, or_f
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import LabeledPrice, PreCheckoutQuery
@@ -11,11 +11,11 @@ from keyboards import kb
 from keyboards.inline import get_callback_buts
 from test import uploading_db
 
-from database.orm_query import (orm_get_all_events, orm_get_upcoming_events, orm_get_event,
-                                orm_get_participants_tg_user_id,
-                                orm_get_feedbacks_user, orm_add_participant, orm_get_events_with_user,
-                                orm_get_participant_tg_user_id_event_id, orm_add_feedback)
-
+from database.orm_query_feedback import orm_get_feedbacks_user, orm_add_feedback
+from database.orm_query_event import (orm_get_all_events, orm_get_upcoming_events,
+                                      orm_get_event, orm_get_events_with_user)
+from database.orm_query_participant import (orm_get_participants_tg_user_id, orm_add_participant,
+                                            orm_get_participant_tg_user_id_event_id)
 
 user_router = Router()
 
