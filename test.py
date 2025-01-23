@@ -1,7 +1,9 @@
 import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.orm_query import orm_add_event, orm_add_participant, orm_add_feedback
+from database.orm_query_event import orm_add_event
+from database.orm_query_participant import orm_add_participant
+from database.orm_query_feedback import orm_add_feedback
 
 
 async def uploading_db(session: AsyncSession):

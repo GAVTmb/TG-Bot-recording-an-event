@@ -1,9 +1,7 @@
-import datetime
-
-from sqlalchemy import select, update, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import Event, Participant, Feedback, Admin
+from database.models import Event, Participant, Feedback
 
 
 # Добавляет отзыв.
@@ -28,16 +26,9 @@ async def orm_get_feedbacks_admin(session: AsyncSession, event_id: int):
     result = await session.execute(query)
     generated_text = []
     for feedback_ in result.all():
-        if feedback_[3] is None:
-            text = f"{feedback_[1]} {feedback_[2]}\nПриватный отзыв: {feedback_[4]}\n\n"
-            generated_text.append(text)
-        elif feedback_[4] is None:
-            text = f"{feedback_[1]} {feedback_[2]}\nПубличный отзыв: {feedback_[3]}\n\n"
-            generated_text.append(text)
-        else:
-            text = (f"{feedback_[1]} {feedback_[2]}\nПриватный отзыв: {feedback_[3]}"
-                    f"\nПубличный отзыв: {feedback_[4]}\n\n")
-            generated_text.append(text)
+        text = (f"{feedback_[2]} {feedback_[1]}\nПриватный отзыв: {feedback_[4]}"
+                f"\nПубличный отзыв: {feedback_[3]}\n\n")
+        generated_text.append(text)
     return generated_text
 
 
@@ -52,7 +43,8 @@ async def orm_get_feedbacks_user(session: AsyncSession, event_id: int):
     result = await session.execute(query)
     generated_text = []
     for feedback_ in result.all():
-        text = f"{feedback_[1]} {feedback_[2]}:\n{feedback_[3]}\n\n"
-        generated_text.append(text)
+        if feedback_[3]:
+            text = f"{feedback_[1]} {feedback_[2]}:\n{feedback_[3]}\n\n"
+            generated_text.append(text)
     return generated_text
 

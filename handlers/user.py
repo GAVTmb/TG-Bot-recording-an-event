@@ -81,19 +81,26 @@ async def show_all_events(message: types.Message, session: AsyncSession):
 
 @user_router.message(F.text == "Записаться на предстоящее")
 async def upcoming_events(message: types.Message, session: AsyncSession):
-    for event in await orm_get_upcoming_events(session):
-        beg_event = event.beginning_event
-        end_event = event.the_end_event
-        await message.answer_photo(
-            event.image,
-            caption=f"{event.name_event}\n\n{event.description_event}\n\nСтоимость участия - {event.price}руб.\n"
-                    f"Пройдет с {beg_event.day}.{beg_event.month}.{beg_event.year} "
-                    f"по {end_event.day}.{end_event.month}.{end_event.year}\n"
-                    f"Количество мест - {event.number_participants}",
-            reply_markup=get_callback_buts(buts={
-                "Записаться": f"registration_{event.id}",
-            }, sizes=(1,))
-        )
+    event_data = await orm_get_upcoming_events(session)
+    if event_data:
+        for event in event_data:
+            beg_event = event.beginning_event
+            end_event = event.the_end_event
+            print('if')
+            await message.answer_photo(
+                event.image,
+                caption=f"{event.name_event}\n\n{event.description_event}\n\nСтоимость участия - {event.price}руб.\n"
+                        f"Пройдет с {beg_event.day}.{beg_event.month}.{beg_event.year} "
+                        f"по {end_event.day}.{end_event.month}.{end_event.year}\n"
+                        f"Место проведения: {event.location_event}\n"
+                        f"Количество мест - {event.number_participants}",
+                reply_markup=get_callback_buts(buts={
+                    "Записаться": f"registration_{event.id}",
+                }, sizes=(1,))
+            )
+    else:
+        print("else")
+        await message.answer("Предстоящих событий еще нет!")
 
 
 @user_router.message(F.text == "Оставить отзыв")
@@ -145,6 +152,37 @@ async def add_feedback_user(callback: types.CallbackQuery, state: FSMContext, se
     await callback.message.answer(f"Напишите ваш отзыв!",
                                   reply_markup=kb.kb_cancel_user.as_markup(resize_keyboard=True))
     await state.set_state(AddFeedbackUser.participant_id)
+
+
+@user_router.message(StateFilter("*"), Command("Отмена"))
+@user_router.message(StateFilter("*"), F.text == "Отмена")
+async def cancel_handler_user(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    if AddUser.user_data:
+        AddUser.user_data = None
+    await state.clear()
+    await message.answer("Отменил!", reply_markup=kb.start_kb_user.as_markup(resize_keyboard=True))
+
+
+# Возвращает на шаг незад
+@user_router.message(StateFilter("*"), Command("Назад"))
+@user_router.message(StateFilter("*"), F.text == "Назад")
+async def return_handler_user(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state == AddUser.surname:
+        await message.answer("Напишите вашу фамилию или жми отмена")
+        return
+
+    previous = None
+    for step in AddUser.__all_states__:
+        if step.state == current_state:
+            await state.set_state(previous)
+            await message.answer(f"Вернул к предыдущему шагу.\n"
+                                 f" {AddUser.texts[previous.state]}")
+            return
+        previous = step
 
 
 @user_router.message(StateFilter(AddFeedbackUser.participant_id), F.text)
@@ -204,37 +242,6 @@ async def register_event(callback: types.CallbackQuery, state: FSMContext, sessi
         await callback.message.answer(f"Давайте запишемся!\n Напиши свою фамилию.",
                                       reply_markup=kb.kb_cancel_back_user.as_markup(resize_keyboard=True))
         await state.set_state(AddUser.surname)
-
-
-@user_router.message(StateFilter("*"), Command("Отмена"))
-@user_router.message(StateFilter("*"), F.text == "Отмена")
-async def cancel_handler_user(message: types.Message, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state is None:
-        return
-    if AddUser.user_data:
-        AddUser.user_data = None
-    await state.clear()
-    await message.answer("Отменил!", reply_markup=kb.start_kb_user.as_markup(resize_keyboard=True))
-
-
-# Возвращает на шаг незад
-@user_router.message(StateFilter("*"), Command("Назад"))
-@user_router.message(StateFilter("*"), F.text == "Назад")
-async def return_handler_user(message: types.Message, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state == AddUser.surname:
-        await message.answer("Напишите вашу фамилию или жми отмена")
-        return
-
-    previous = None
-    for step in AddUser.__all_states__:
-        if step.state == current_state:
-            await state.set_state(previous)
-            await message.answer(f"Вернул к предыдущему шагу.\n"
-                                 f" {AddUser.texts[previous.state]}")
-            return
-        previous = step
 
 
 @user_router.message(StateFilter(AddUser.surname), F.text)

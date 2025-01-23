@@ -258,7 +258,7 @@ async def participants_event_admin(callback: types.CallbackQuery, session: Async
     counter = 0
     for participant in await orm_get_participants(session, int(event_id)):
         counter += 1
-        text = f"{counter}.{participant.surname} {participant.name}\n   Номер тел-а: {participant.phone_number}.\n\n"
+        text = f"{counter}.{participant.surname} {participant.name}\n   тел.: {participant.phone_number}.\n\n"
         participants_list.append(text)
     if participants_list:
         await callback.answer()
@@ -529,6 +529,7 @@ async def add_location_event_admin(message: types.Message, state: FSMContext):
 @admin_router.message(StateFilter(AddEvent.number_participants), F.text)
 async def add_number_participants_admin(message: types.Message, state: FSMContext, session: AsyncSession):
     print(message.text)
+    admin = await orm_get_admin(session, str(message.from_user.id))
     try:
         if message.text == "Пропустить":
             await state.update_data(number_participants=AddEvent.event_for_change.number_participants)
@@ -539,12 +540,20 @@ async def add_number_participants_admin(message: types.Message, state: FSMContex
 
         if AddEvent.event_for_change:
             await orm_update_event(session, AddEvent.event_for_change.id, data)
-            await message.answer("Собысие изменено!",
-                                 reply_markup=kb.start_kb_admin.as_markup(resize_keyboard=True))
+            if admin.admin_access:
+                await message.answer("Собысие изменено!",
+                                     reply_markup=kb.start_kb_admin.as_markup(resize_keyboard=True))
+            else:
+                await message.answer("Собысие изменено!",
+                                     reply_markup=kb.start_kb_main_admin.as_markup(resize_keyboard=True))
         else:
             await orm_add_event(session, data)
-            await message.answer("Собысие добавлено!",
-                                 reply_markup=kb.start_kb_admin.as_markup(resize_keyboard=True))
+            if admin.admin_access:
+                await message.answer("Собысие добавлено!",
+                                     reply_markup=kb.start_kb_admin.as_markup(resize_keyboard=True))
+            else:
+                await message.answer("Собысие добавлено!",
+                                     reply_markup=kb.start_kb_main_admin.as_markup(resize_keyboard=True))
         await state.clear()
         AddEvent.event_for_change = None
     except Exception as error:
